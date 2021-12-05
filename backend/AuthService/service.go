@@ -41,9 +41,7 @@ func (authServer) Login(ctx context.Context, in *proto.LoginRequest) (*proto.Aut
 	return &proto.AuthResponse{Token: user.GetToken()}, nil
 }
 
-var server authServer
-
-func (authServer) SignUp(ctx context.Context, in *proto.SignupRequest) (*proto.AuthResponse, error) {
+func (server authServer) SignUp(ctx context.Context, in *proto.SignupRequest) (*proto.AuthResponse, error) {
 	username, email, password := in.GetUsername(), in.GetEmail(), in.GetPassword()
 	match, _ := regexp.MatchString(global.EmailRegex, email)
 	if len(username) < 4 || len(username) > 20 || len(email) < 7 || len(email) > 35 || len(password) < 8 || len(password) > 128 || !match {
@@ -96,6 +94,12 @@ func (authServer) UsernameUsed(ctx context.Context, in *proto.UsernameUsedReques
 	var result global.User
 	global.DB.Collection("user").FindOne(ctx, bson.M{"username": username}).Decode(&result)
 	return &proto.UsedResponse{Used: result != global.NilUser}, nil
+}
+
+func (authServer) AuthUser(ctx context.Context, in *proto.AuthUserRequest) (*proto.AuthUserResponse, error) {
+	var token = in.GetToken()
+	user := global.UserFromToken(token)
+	return &proto.AuthUserResponse{ID: user.ID.Hex(), Username: user.Username, Email: user.Email}, nil
 }
 
 func main() {

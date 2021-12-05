@@ -96,3 +96,14 @@ func Test_authServer_SignUp(t *testing.T) {
 		t.Error("4: No or wrong error returned for validation")
 	}
 }
+
+func Test_authServer_AuthUser(t *testing.T) {
+	server := authServer{}
+	res, err := server.AuthUser(context.Background(), &proto.AuthUserRequest{Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjoie1wiSURcIjpcIjYxYWQzN2M3N2I1Y2RiNTdmMTRjMzZlNlwiLFwiVXNlcm5hbWVcIjpcIkNhcmxcIixcIkVtYWlsXCI6XCJ0ZXN0QGdtYWlsLmNvbVwiLFwiUGFzc3dvcmRcIjpcIiQyYSQxMCREdHV5L3hLcGxpem5LejQuelNwSUplUC5ya2FidkJmenFOUWgvS1dMS0VpcktWNE83a25KcVwifSJ9.V-VxigRdxwVWfALe6cj7AtM_6wXUlz3YatszmtDoGYk"})
+	if err != nil {
+		t.Errorf("An error was returned: %v", err)
+	}
+	if res.GetID() != "61ad37c77b5cdb57f14c36e6" || res.GetUsername() != "Carl" || res.GetEmail() != "test@gmail.com" {
+		t.Errorf("Wrong result returned: %v", res)
+	}
+}
