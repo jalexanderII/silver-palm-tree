@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"regexp"
 	"time"
 
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/jalexanderII/silver-palm-tree/global"
 	"github.com/jalexanderII/silver-palm-tree/proto"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 )
 
@@ -112,5 +116,28 @@ func main() {
 
 	grpcServer := grpc.NewServer(opts...)
 	proto.RegisterAuthServiceServer(grpcServer, newServer())
-	grpcServer.Serve(lis)
+	go func() {
+		log.Fatal("Serving gRPC: ", grpcServer.Serve(lis).Error())
+	}()
+
+	// From https://rogchap.com/2019/07/26/in-process-grpc-web-proxy/
+	grpcWebServer := grpcweb.WrapServer(grpcServer)
+	httpServer := &http.Server{
+		Addr: ":6000",
+		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.ProtoMajor == 2 {
+				grpcWebServer.ServeHTTP(w, r)
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+				w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-User-Agent, X-Grpc-Web")
+				w.Header().Set("grpc-status", "")
+				w.Header().Set("grpc-message", "")
+				if grpcWebServer.IsGrpcWebRequest(r) {
+					grpcWebServer.ServeHTTP(w, r)
+				}
+			}
+		}), &http2.Server{}),
+	}
+	log.Fatal("Serving Proxy: ", httpServer.ListenAndServe().Error())
 }
