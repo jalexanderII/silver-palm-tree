@@ -31,10 +31,16 @@ func (u User) GetToken() string {
 // UserFromToken returns a user which is authenticated with this token
 func UserFromToken(token string) User {
 	claims := jwt.MapClaims{}
-	jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
+	if err != nil {
+		return User{}
+	}
 	var result User
-	json.Unmarshal([]byte(claims["data"].(string)), &result)
+	err = json.Unmarshal([]byte(claims["data"].(string)), &result)
+	if err != nil {
+		return User{}
+	}
 	return result
 }

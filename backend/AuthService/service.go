@@ -44,7 +44,10 @@ func (authServer) Login(ctx context.Context, in *proto.LoginRequest) (*proto.Aut
 	defer cancel()
 
 	var user global.User
-	userCollection.FindOne(ctx, bson.M{"$or": []bson.M{{"username": login}, {"email": login}}}).Decode(&user)
+	err := userCollection.FindOne(ctx, bson.M{"$or": []bson.M{{"username": login}, {"email": login}}}).Decode(&user)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong: %v", err)
+	}
 	if user == global.NilUser || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
 		return nil, errors.New("wrong login credentials provided")
 	}
@@ -93,7 +96,10 @@ func (authServer) EmailUsed(ctx context.Context, in *proto.EmailUsedRequest) (*p
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
 	var result global.User
-	userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&result)
+	err := userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&result)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong: %v", err)
+	}
 	return &proto.UsedResponse{Used: result != global.NilUser}, nil
 }
 
@@ -102,11 +108,14 @@ func (authServer) UsernameUsed(ctx context.Context, in *proto.UsernameUsedReques
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
 	var result global.User
-	userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&result)
+	err := userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&result)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong: %v", err)
+	}
 	return &proto.UsedResponse{Used: result != global.NilUser}, nil
 }
 
-func (authServer) AuthUser(ctx context.Context, in *proto.AuthUserRequest) (*proto.AuthUserResponse, error) {
+func (authServer) AuthUser(_ context.Context, in *proto.AuthUserRequest) (*proto.AuthUserResponse, error) {
 	var token = in.GetToken()
 	user := global.UserFromToken(token)
 	return &proto.AuthUserResponse{ID: user.ID.Hex(), Username: user.Username, Email: user.Email}, nil

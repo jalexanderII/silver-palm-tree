@@ -47,7 +47,10 @@ func ConnectToTestDB() {
 	collections, _ := DB.ListCollectionNames(ctx, bson.M{})
 	for _, collection := range collections {
 		ctx, cancel := NewDBContext(10 * time.Second)
-		DB.Collection(collection).Drop(ctx)
+		err := DB.Collection(collection).Drop(ctx)
+		if err != nil {
+			log.Fatalf("Error clearning DB: %v", err)
+		}
 		cancel()
 	}
 }
