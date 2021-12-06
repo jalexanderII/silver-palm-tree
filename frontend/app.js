@@ -1,12 +1,19 @@
-import Navigo from 'navigo';
-import { Home } from "./views/home"
+import Navigo from 'navigo'
 
-const router = new Navigo('/');
+import { Home } from "./views/home"
+import { Login } from "./views/login"
+import { Signup } from "./views/signup"
+import { AuthServiceClient } from './proto/services_grpc_web_pb'
+
+const authClient = new AuthServiceClient("http://localhost:9001")
+
+var root = "/";
+const router = new Navigo(root)
 
 router
     .on("/", Home)
-    // .on("/login", Login)
-    // .on("/signup", Signup)
+    .on("/login", Login)
+    .on("/signup", Signup)
     .resolve()
 
-export { router } 
+export { router, authClient }
