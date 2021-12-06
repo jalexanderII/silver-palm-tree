@@ -22,7 +22,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var port = flag.Int("port", 50051, "The server port")
+var port = flag.Int("port", 9090, "The server port")
 
 type authServer struct {
 	proto.UnimplementedAuthServiceServer
@@ -123,7 +123,7 @@ func main() {
 	// From https://rogchap.com/2019/07/26/in-process-grpc-web-proxy/
 	grpcWebServer := grpcweb.WrapServer(grpcServer)
 	httpServer := &http.Server{
-		Addr: ":6000",
+		Addr: ":9001",
 		Handler: h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.ProtoMajor == 2 {
 				grpcWebServer.ServeHTTP(w, r)
