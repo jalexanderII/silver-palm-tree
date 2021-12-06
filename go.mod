@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/improbable-eng/grpc-web v0.15.0
+	github.com/joho/godotenv v1.4.0
 	github.com/pkg/errors v0.9.1
 	go.mongodb.org/mongo-driver v1.8.0
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f

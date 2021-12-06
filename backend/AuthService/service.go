@@ -16,17 +16,23 @@ import (
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 )
 
-var port = flag.Int("port", 9090, "The server port")
+var (
+	port = flag.Int("port", 9090, "The server port")
+	mc   = flag.String("mc", "user", "Name of the mongo DB collection")
+)
 
 type authServer struct {
 	proto.UnimplementedAuthServiceServer
 }
+
+var userCollection mongo.Collection
 
 func newServer() *authServer {
 	return &authServer{}
@@ -38,7 +44,7 @@ func (authServer) Login(ctx context.Context, in *proto.LoginRequest) (*proto.Aut
 	defer cancel()
 
 	var user global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"$or": []bson.M{{"username": login}, {"email": login}}}).Decode(&user)
+	userCollection.FindOne(ctx, bson.M{"$or": []bson.M{{"username": login}, {"email": login}}}).Decode(&user)
 	if user == global.NilUser || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
 		return nil, errors.New("wrong login credentials provided")
 	}
@@ -74,7 +80,7 @@ func (server authServer) SignUp(ctx context.Context, in *proto.SignupRequest) (*
 
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
-	_, err = global.DB.Collection("user").InsertOne(ctx, newUser)
+	_, err = userCollection.InsertOne(ctx, newUser)
 	if err != nil {
 		log.Printf("Error inserting new user: %v\n", err)
 		return nil, errors.New("Something went wrong")
@@ -87,7 +93,7 @@ func (authServer) EmailUsed(ctx context.Context, in *proto.EmailUsedRequest) (*p
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
 	var result global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"email": email}).Decode(&result)
+	userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&result)
 	return &proto.UsedResponse{Used: result != global.NilUser}, nil
 }
 
@@ -96,7 +102,7 @@ func (authServer) UsernameUsed(ctx context.Context, in *proto.UsernameUsedReques
 	ctx, cancel := global.NewDBContext(5 * time.Second)
 	defer cancel()
 	var result global.User
-	global.DB.Collection("user").FindOne(ctx, bson.M{"username": username}).Decode(&result)
+	userCollection.FindOne(ctx, bson.M{"username": username}).Decode(&result)
 	return &proto.UsedResponse{Used: result != global.NilUser}, nil
 }
 
@@ -112,6 +118,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
+	userCollection = *global.DB.Collection(*mc)
+
 	var opts []grpc.ServerOption
 
 	grpcServer := grpc.NewServer(opts...)

@@ -13,3 +13,22 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+#Air
+bin/
+tmp/
+backend/tmp/
+.air.toml
+
+# IDL
+.idea
+.idea/
+
+#ENV
+.env
+.env/
+global/const.go
+
+# Database
+*.sqlite
+*.db
